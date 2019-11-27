@@ -1,0 +1,96 @@
+#app {
+
+  .navbar-container {
+    background: $menuActiveText;
+    height: 48px;
+  }
+
+  // 主体区域 Main container
+  .main-container {
+    //float: left;
+    height: calc(100vh - 60px);
+    transition: margin-left .28s;
+    position: absolute;
+    top: 48px;
+    left: $sideBarWidth;
+    right: 0;
+    background: #f7faff;
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    &::-webkit-scrollbar-track-piece {
+      background-color: rgba(0, 0, 0, 0.2);
+      -webkit-border-radius: 6px;
+    }
+   &::-webkit-scrollbar-thumb:vertical {
+      height: 5px;
+      background-color: rgba(125, 125, 125, 0.7);
+      -webkit-border-radius: 6px;
+    }
+    &::-webkit-scrollbar-thumb:horizontal {
+      width: 5px;
+      background-color: rgba(125, 125, 125, 0.7);
+      -webkit-border-radius: 6px;
+    }
+    .pagenation {
+      margin: 20px 0;
+      text-align: right;
+    }
+  }
+
+  // 主体区域全局样式
+  .margin {
+    margin: 20px;
+    // padding-left: 20px;
+  }
+
+  // 侧边栏 Sidebar container
+  .sidebar-container {
+    width: $sideBarWidth;
+    height: 100%;
+    position: fixed;
+    top: 48px;
+    bottom: 0;
+    left: 0;
+    z-index: 1001;
+    overflow-y: auto;
+    background: #fff;
+    &::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+    &::-webkit-scrollbar-track-piece {
+      background-color: rgba(0, 0, 0, 0.2);
+      -webkit-border-radius: 6px;
+    }
+   &::-webkit-scrollbar-thumb:vertical {
+      height: 5px;
+      background-color: rgba(125, 125, 125, 0.7);
+      -webkit-border-radius: 6px;
+    }
+    &::-webkit-scrollbar-thumb:horizontal {
+      width: 5px;
+      background-color: rgba(125, 125, 125, 0.7);
+      -webkit-border-radius: 6px;
+    }
+  }
+}
+
+.tabs-header {
+  li {
+    float: left;
+    font-size: 16px;
+    padding: 0 16px;
+    line-height: 36px;
+    text-align: center;
+    cursor: pointer;
+    &.active, &.router-link-active {
+      background: #fff;
+      border: 1px solid #d7e0f1;
+      border-bottom-color: #fff;
+      margin-bottom: -1px;
+    }
+  }
+}

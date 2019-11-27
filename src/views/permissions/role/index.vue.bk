@@ -1,0 +1,508 @@
+<template>
+  <div class="margin">
+    <div class="mbottom">
+      <div class="goods-fitter">
+        <el-form label-width="100px" size="small">
+          <div class="search-wrapper">
+            <h4 class="title">搜索条件</h4>
+            <div class="search-base">
+              <el-row>
+                <el-col :span="5">
+                  <el-col>
+                    <el-form-item label="角色名称：">
+                      <el-col :span="22">
+                        <el-input v-model="tableData.serch" clearable placeholder="请输入角色名称"></el-input>
+                      </el-col>
+                    </el-form-item>
+                  </el-col>
+                </el-col>
+                <el-col :span="1" class="btn_right">
+                  <el-button type="primary" size="small" @click="_getRole(true)">搜索</el-button>
+                </el-col>
+              </el-row>
+            </div>
+          </div>
+        </el-form>
+      </div>
+    </div>
+    <div class="mcard">
+      <el-row class="operate mbottom">
+        <el-col :span="21">
+          <el-button type="primary" size="small" @click="addrole">新增</el-button>
+        </el-col>
+        <el-col :span="3"></el-col>
+      </el-row>
+      <el-table :data="tableData.data" border style="width: 100%" stripe>
+        <el-table-column prop="roleId" label="角色ID" align="center"></el-table-column>
+        <el-table-column prop="roleName" label="角色名称" align="center"></el-table-column>
+        <el-table-column prop="organizeName" label="部门" align="center"></el-table-column>
+        <el-table-column prop="description" label="描述" align="center"></el-table-column>
+        <el-table-column prop="createTime" label="创建时间" align="center"></el-table-column>
+        <el-table-column prop="updateTime" label="修改时间" align="center"></el-table-column>
+        <el-table-column label="操作" align="center" fixed="right" width="150">
+          <template slot-scope="scope">
+            <div class="line-div small_top">
+              <div class="small-Idiv" @click="dialogVisibleFunc(scope.row.roleId)">
+                <div class="i-div">
+                  <img src="../../../common/images/icon/审核.png" alt class="operation_img" />
+                </div>
+                <span style="word-break: keep-all; margin-left: -10px;">关联用户</span>
+              </div>
+              <div class="small-Idiv" @click="onRoleAuthorityEvent(scope.row)">
+                <div class="i-div" style="margin-left: 20px;">
+                  <img src="../../../common/images/icon/服务授权.png" alt class="operation_img" />
+                </div>
+                <span style="word-break: keep-all; margin-left: 12px;">角色授权</span>
+              </div>
+            </div>
+            <div class="line-div small_top">
+              <div class="small-Idiv" @click="editRole(scope.row.roleId)">
+                <div class="i-div">
+                  <img src="../../../common/images/icon/编辑.png" alt class="operation_img" />
+                </div>
+                <span>编辑</span>
+              </div>
+              <div
+                class="small-Idiv"
+                v-if="!scope.row.systemRole"
+                @click="deleteRole(scope.row.roleId)"
+              >
+                <div class="i-div huishouzhan">
+                  <img src="../../../common/images/icon/回收站.png" alt class="operation_img" />
+                </div>
+                <span style="word-break: keep-all;margin-left: -2px;">移除</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="paginationyz">
+        <el-pagination
+          background
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :current-page="tableData.currentPage"
+          :page-sizes="tableData.sizes"
+          :page-size="tableData.size"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="tableData.total"
+        ></el-pagination>
+      </div>
+
+      <!-- 角色授权 -->
+      <el-dialog title="角色授权" :visible.sync="roleAuthorityDialogVisible" width="30%">
+        <span>
+          <el-tree
+            :data="menuTree"
+            :props="{children: 'children', label: 'menuName'}"
+            node-key="menuId"
+            show-checkbox
+            ref="tree"
+            :default-expand-all="true"
+          ></el-tree>
+        </span>
+        <span slot="footer" class="dialog-footer">
+          <el-button type="danger" @click="roleAuthorityDialogVisible = false" size="small">取 消</el-button>
+          <el-button type="primary" size="small" @click="onSaveRoleAuthority">确 定</el-button>
+        </span>
+      </el-dialog>
+
+      <!-- 关联用户 -->
+      <el-dialog title="角色人员" :visible.sync="dialogVisible" width="800px">
+        <div class="roleuser">
+          <el-transfer v-model="value" :data="data" :titles="['角色人员名单', '角色使用授权']"></el-transfer>
+          <span class="pushmsg">推送</span>
+          <div slot="footer" class="dialog-footer">
+            <el-button type="danger" @click="dialogVisible = false" size="small">取 消</el-button>
+            <el-button type="primary" @click="submitAssociated" size="small">确 定</el-button>
+          </div>
+        </div>
+      </el-dialog>
+
+      <!-- 移除角色 -->
+      <el-dialog title="删除用户" :visible.sync="usershow" width="40%">
+        <span>是否确认删除角色</span>
+        <div slot="footer" class="dialog-footer">
+          <el-button type="danger" @click="usershow = false" size="small">取 消</el-button>
+          <el-button type="primary" @click="submitDelete" size="small">确 定</el-button>
+        </div>
+      </el-dialog>
+    </div>
+  </div>
+</template>
+<script>
+import {
+  getRole,
+  deleteRole,
+  getidRole,
+  getAlluser,
+  getAllMenu,
+  editorRole,
+  saveAssociateduser
+} from "@/api/permissions/index";
+
+export default {
+  data() {
+    return {
+      dialogVisible: false, // 角色关联用户弹窗
+      roleAuthorityDialogVisible: false, // 角色权限配置弹窗
+      usershow: false, // 删除用户弹窗
+      menuTree: null,
+      data: [],
+      value: [],
+      roleId: "", // 角色id
+      tableData: {
+        data: [],
+        currentPage: 1,
+        sizes: [10, 20, 50, 100],
+        size: 10,
+        total: 0,
+        serch: ""
+      }
+    };
+  },
+  watch: {
+    roleAuthorityDialogVisible(value) {
+      if (!value) {
+        this.$refs.tree.setCheckedKeys([]);
+      }
+    }
+  },
+  mounted() {
+    this._getRole();
+  },
+  methods: {
+    // 确定删除
+    submitDelete() {
+      deleteRole(this.roleId).then(res => {
+        this._getRole();
+        this.usershow = false;
+        this.$message({
+          type: "success",
+          message: res.message
+        });
+      });
+    },
+    // 保存角色关联用户
+    submitAssociated() {
+      let userIds = "";
+      this.value.forEach(item => {
+        userIds += item + ",";
+      });
+      saveAssociateduser(
+        this.roleId,
+        userIds.slice(0, userIds.length - 1)
+      ).then(res => {
+        this.dialogVisible = false;
+      });
+    },
+    dialogVisibleFunc(id) {
+      this.roleId = id;
+      this.dialogVisible = true;
+      this.value = [];
+      let bigid = id;
+      let that = this;
+      setTimeout(function() {
+        that._getAlluser(id);
+      }, 50);
+    },
+
+    // 获取用户已关联角色
+    _getAlluser(val) {
+      getAlluser(val).then(res => {
+        res.have_relation.forEach(item => {
+          this.data.push({
+            label: item.sysuserName,
+            key: item.sysuserId
+          });
+          this.value.push(item.sysuserId);
+        });
+        res.un_relation.forEach(item => {
+          this.data.push({
+            label: item.sysuserName,
+            key: item.sysuserId
+          });
+        });
+      });
+    },
+    addrole() {
+      this.$router.push({ name: "Addrole" });
+    },
+    async _getRole(value) {
+      if (value) this.tableData.currentPage = 1;
+      const { data } = await getRole(this.tableData);
+
+      this.tableData.data = data.list;
+      this.tableData.total = data.total;
+    },
+    handleSizeChange(val) {
+      this.tableData.size = val;
+      this._getRole();
+    },
+    handleCurrentChange(val) {
+      this.tableData.currentPage = val;
+      this._getRole();
+    },
+
+    // 编辑
+    editRole(id) {
+      this.$router.push({ name: "Addrole", query: { id: id } });
+    },
+    // 删除
+    deleteRole(id) {
+      this.usershow = true;
+      this.roleId = id;
+    },
+
+    /**
+     * 初始化菜单树
+     */
+    async initMenuTree() {
+      const { data } = await getAllMenu();
+      this.menuTree = data;
+    },
+
+    /**
+     * 获取当前角色拥有的菜单权限ID
+     */
+    initRoleMenuSelected(menu, authorities) {
+      if (menu && menu.length) {
+        return menu.forEach(({ menuId, permission, children }) => {
+          //如果该菜单不需要权限或拥有权限则添加
+          if (permission == null || permission == "") {
+            this.$refs.tree.setChecked(menuId, true, false);
+          } else {
+            if (authorities.includes(permission)) {
+              this.$refs.tree.setChecked(menuId, true, false);
+            } else {
+              return;
+            }
+          }
+
+          //如果存在子节点则添加
+          if (children && children.length) {
+            this.initRoleMenuSelected(children, authorities);
+          }
+        });
+      }
+    },
+
+    /**
+     * 点击角色授权按钮事件
+     */
+    async onRoleAuthorityEvent(e) {
+      this.roleAuthorityDialogVisible = true;
+      if (!this.menuTree) {
+        await this.initMenuTree();
+      }
+
+      const { data } = await getidRole(e.roleId);
+      const authorities = data.authorities || [];
+      this.initRoleMenuSelected(this.menuTree, authorities);
+      this.roleId = data.roleId;
+    },
+
+    /**
+     * 点击角色授权确定保存按钮事件
+     */
+    async onSaveRoleAuthority() {
+      const tree = this.$refs.tree;
+      const checkedNodes = [
+        ...tree.getHalfCheckedNodes(),
+        ...tree.getCheckedNodes()
+      ];
+      const authorities = checkedNodes
+        .filter(item => item.permission != null && item.permission != "")
+        .map(item => item.permission);
+
+      try {
+        const res = await editorRole(
+          {
+            authorities: JSON.stringify(authorities)
+          },
+          this.roleId
+        );
+
+        this.$message({
+          message: res.message,
+          type: "success"
+        });
+      } finally {
+        this.roleAuthorityDialogVisible = false;
+      }
+    }
+  }
+};
+</script>
+<style lang="scss" scoped>
+@import "@/common/scss/variable.scss";
+.goods-fitter {
+  .vender {
+    ul {
+      li {
+        float: left;
+        height: 41px;
+        padding: 0 10px;
+        line-height: 41px;
+        text-align: center;
+        border: 1px solid transparent;
+        font-size: 16px;
+        color: #333;
+        cursor: pointer;
+        &.active {
+          border: 1px solid #d7e0f1;
+          border-bottom: 0;
+          background-color: #fff;
+          position: relative;
+          position: relative;
+          &:after {
+            position: absolute;
+            content: "";
+            left: 0;
+            bottom: -1px;
+            height: 1px;
+            width: 100%;
+            background: #fff;
+          }
+        }
+        .image {
+          display: inline-block;
+          width: 30px;
+          margin-right: 10px;
+          font-size: 0;
+          line-height: 40px;
+          vertical-align: top;
+          img {
+            width: 100%;
+            vertical-align: middle;
+          }
+        }
+      }
+    }
+  }
+  .search-wrapper {
+    padding: 20px;
+    border: 1px solid rgb(215, 224, 241);
+    background: #fff;
+    .title {
+      margin-left: -20px;
+      font-size: 16px;
+      font-weight: 400;
+      color: 3333;
+      padding-left: 10px;
+      line-height: 1.4;
+      border-left: 4px solid $themeColor;
+      margin-bottom: 10px;
+    }
+    .search-main {
+    }
+    .search-base {
+    }
+  }
+  .text-space {
+    text-align: center;
+    color: #606266;
+    font-size: 12px;
+  }
+  .el-select-width {
+    max-width: 240px;
+    margin-right: 5px;
+  }
+  .el-date-picker {
+    max-width: 240px;
+    margin-right: 5px;
+  }
+  .el-input-width {
+    display: inline-block;
+    max-width: 180px;
+  }
+  .btn-toggle {
+    margin-left: 10px;
+    font-size: 14px;
+    color: $themeColor;
+    cursor: pointer;
+  }
+}
+.goods-list-wrapper {
+  margin-top: 20px;
+}
+.el-transfer-panel__header {
+  background: $themeColor;
+  color: #fff;
+}
+.item {
+  line-height: 1.5;
+  padding: 8px 10px;
+  cursor: pointer;
+  &:hover {
+    color: $themeColor;
+  }
+  &.active {
+    background: #c6e2ff;
+    color: #fff;
+  }
+}
+.image {
+  cursor: pointer;
+}
+.item-name {
+  cursor: pointer;
+  &:hover {
+    color: $themeColor;
+  }
+}
+.el-icon-arrow-right {
+  margin: 0 20px;
+}
+.store {
+  width: 310px;
+}
+.red {
+  color: $themeSubColor;
+}
+.transfer-wrapper {
+  text-align: center;
+}
+.panel-wrapper {
+  text-align: left;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  height: 246px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.dialog-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+.i-div {
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.line-div {
+  display: flex;
+  justify-content: space-between;
+}
+.small_top {
+  margin-top: 10px;
+  margin-left: 15px;
+  margin-right: 15px;
+}
+.roleuser{
+  position: relative;
+  .pushmsg{
+    position: absolute;
+    top: 11px;
+    left: 47%;
+    font-size: 16px;
+    color: #303133;
+    font-weight: 400;
+  }
+}
+</style>
